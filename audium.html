@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Audium</title>
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#080808"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Audium"/>
+  <meta name="application-name" content="Audium"/>
+  <meta name="description" content="Leitor de texto em voz alta — TXT, PDF e DOCX"/>
+  <link rel="manifest" id="pwaManifest"/>
+  <link rel="apple-touch-icon" id="appleTouchIcon"/>
+
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,300;1,500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --surface: #0f0f0f;
+      --card: #131313;
+      --card2: #171717;
+      --border: #1e1e1e;
+      --border2: #282828;
+      --accent: #c9a84c;
+      --accent-dim: #c9a84c1a;
+      --accent-glow: #c9a84c10;
+      --text: #ede8db;
+      --text2: #9a9285;
+      --muted: #484440;
+      --red: #b85c5c;
+      --red-dim: #2a1515;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px 100px;
+      background-image: radial-gradient(ellipse 100% 50% at 50% -5%, #c9a84c0b 0%, transparent 65%);
+    }
+
+    /* ══ HEADER ══ */
+    header {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 40px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+      animation: fadeDown 0.7s ease both;
+    }
+
+    .brand { display: flex; flex-direction: column; gap: 6px; }
+
+    .brand-eye {
+      font-size: 9px;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.8rem, 7vw, 4.4rem);
+      font-weight: 300;
+      line-height: 0.9;
+      color: var(--text);
+      letter-spacing: -2px;
+    }
+
+    .brand-name em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      padding-bottom: 4px;
+    }
+
+    .header-tag {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border2);
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    /* ══ LAYOUT ══ */
+    .container {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .section-gap { height: 28px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 22px 26px;
+      animation: fadeUp 0.6s ease both;
+      position: relative;
+    }
+
+    /* Rounded groups */
+    .group-top    { border-radius: 10px 10px 0 0; }
+    .group-mid    { border-radius: 0; border-top: none; }
+    .group-bottom { border-radius: 0 0 10px 10px; border-top: none; }
+    .group-solo   { border-radius: 10px; }
+
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.10s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.20s; }
+    .card:nth-child(5) { animation-delay: 0.25s; }
+    .card:nth-child(6) { animation-delay: 0.30s; }
+
+    .card-label {
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ══ DROP ZONE ══ */
+    .drop-zone {
+      border: 1px dashed var(--border2);
+      border-radius: 7px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 14px;
+      position: relative;
+      background: var(--surface);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .drop-zone input[type=file] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .drop-zone-icon { font-size: 18px; margin-bottom: 5px; opacity: 0.4; }
+    .drop-zone-text {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+    .drop-zone-text span { color: var(--accent); }
+    .drop-zone-formats {
+      font-size: 9px; letter-spacing: 1px;
+      color: var(--muted); margin-top: 4px;
+    }
+
+    /* ══ TIME BADGE ══ */
+    .time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--accent-dim);
+      border: 1px solid #c9a84c28;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 1px;
+      transition: opacity 0.3s;
+    }
+    .time-badge.hidden { opacity: 0; pointer-events: none; }
+
+    /* ══ TEXTAREA / READER ══ */
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    .reader-panel {
+      display: none;
+      width: 100%;
+      min-height: 170px;
+      max-height: 280px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 2.1;
+      color: var(--text);
+      word-break: break-word;
+      scroll-behavior: smooth;
+    }
+    .reader-panel .word {
+      display: inline;
+      border-radius: 3px;
+      padding: 1px 2px;
+      transition: background 0.1s, color 0.1s;
+      cursor: pointer;
+    }
+    .reader-panel .word:hover { background: #c9a84c15; }
+    .reader-panel .word.highlight {
+      background: var(--accent);
+      color: #080808;
+      font-weight: 500;
+      border-radius: 4px;
+      padding: 1px 5px;
+      box-shadow: 0 0 12px #c9a84c40;
+    }
+    .reader-panel .word.done { color: var(--muted); }
+    .reader-panel .word.touch-active { background: #c9a84c1a; }
+
+    /* ══ MODE TOGGLE ══ */
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .mode-tabs { display: flex; }
+    .mode-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-btn:first-child { border-radius: 5px 0 0 5px; }
+    .mode-btn:last-child  { border-radius: 0 5px 5px 0; border-left: none; }
+    .mode-btn.active {
+      background: var(--accent); color: #080808;
+      border-color: var(--accent); font-weight: 500;
+    }
+
+    /* ══ META ROW ══ */
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .char-count { font-size: 10px; color: var(--muted); }
+    .meta-actions { display: flex; align-items: center; gap: 7px; }
+
+    /* ══ FONT CONTROLS ══ */
+    .font-controls {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .font-controls.visible { display: flex; }
+    .font-controls label {
+      font-size: 9px; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--muted); white-space: nowrap;
+    }
+
+    /* ══ CONTROLS GRID ══ */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      padding: 9px 30px 9px 11px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23484440' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .slider-group { margin-bottom: 12px; }
+    .slider-group:last-child { margin-bottom: 0; }
+
+    .slider-wrap { display: flex; align-items: center; gap: 10px; }
+
+    input[type=range] {
+      flex: 1; -webkit-appearance: none;
+      height: 2px; background: var(--border2);
+      border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px; height: 13px;
+      background: var(--accent); border-radius: 50%;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+    .slider-val {
+      font-size: 11px; color: var(--accent);
+      min-width: 32px; text-align: right;
+    }
+
+    /* ══ VISUALIZER / PLAYER ══ */
+    .player-wrap {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 4px;
+    }
+
+    .visualizer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: 40px;
+      margin-bottom: 6px;
+    }
+    .bar {
+      width: 3px; background: var(--accent);
+      border-radius: 2px; height: 4px;
+      opacity: 0.2; transition: height 0.1s, opacity 0.1s;
+    }
+    .speaking .bar {
+      opacity: 1;
+      animation: wave 0.8s ease-in-out infinite alternate;
+    }
+    .bar:nth-child(1)  { animation-delay: 0.00s; }
+    .bar:nth-child(2)  { animation-delay: 0.07s; }
+    .bar:nth-child(3)  { animation-delay: 0.14s; }
+    .bar:nth-child(4)  { animation-delay: 0.21s; }
+    .bar:nth-child(5)  { animation-delay: 0.28s; }
+    .bar:nth-child(6)  { animation-delay: 0.35s; }
+    .bar:nth-child(7)  { animation-delay: 0.42s; }
+    .bar:nth-child(8)  { animation-delay: 0.35s; }
+    .bar:nth-child(9)  { animation-delay: 0.28s; }
+    .bar:nth-child(10) { animation-delay: 0.21s; }
+    .bar:nth-child(11) { animation-delay: 0.14s; }
+    .bar:nth-child(12) { animation-delay: 0.07s; }
+    .bar:nth-child(13) { animation-delay: 0.00s; }
+    @keyframes wave { from { height: 4px; } to { height: 28px; } }
+
+    .status-text {
+      text-align: center;
+      font-size: 9px; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .status-text.active { color: var(--accent); }
+
+    /* ══ BUTTONS ══ */
+    .btn-row { display: flex; gap: 7px; flex-wrap: wrap; }
+
+    button {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; border: none;
+      border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; padding: 11px 18px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent); color: #080808;
+      font-weight: 500; flex: 1;
+    }
+    .btn-primary:hover { background: #d9b85c; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border2);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    .btn-danger {
+      background: transparent; color: var(--red);
+      border: 1px solid var(--red-dim);
+    }
+    .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+    .btn-danger:disabled { opacity: 0.25; cursor: not-allowed; }
+
+    .btn-copy {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 10px; border-radius: 4px;
+      border: 1px solid var(--border2);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-copy.copied { border-color: #5cad6e; color: #5cad6e; }
+
+    .btn-clear {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 10px; border-radius: 4px;
+      background: transparent; color: var(--red);
+      border: 1px solid var(--red-dim);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-clear:hover { background: var(--red-dim); border-color: var(--red); }
+
+    /* ══ PDF PANEL ══ */
+    .pdf-panel {
+      display: none;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .pdf-panel.visible { display: block; }
+
+    .pdf-panel-header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 9px 13px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 8px;
+      background: var(--card2);
+    }
+    .pdf-panel-title {
+      font-size: 9px; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .pdf-panel-info { font-size: 10px; color: var(--muted); }
+
+    .pdf-page-grid {
+      display: flex; flex-wrap: wrap; gap: 5px;
+      padding: 10px 13px; max-height: 130px; overflow-y: auto;
+    }
+    .pdf-page-btn {
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      width: 30px; height: 30px; border-radius: 4px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .pdf-page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pdf-page-btn.active {
+      background: var(--accent); color: #080808;
+      border-color: var(--accent); font-weight: 600;
+    }
+    .pdf-page-btn.selected {
+      background: var(--accent-dim); color: var(--accent);
+      border-color: var(--accent); font-weight: 600;
+    }
+    .pdf-sel-info {
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--accent); display: none; align-items: center; gap: 8px;
+    }
+    .pdf-sel-info.visible { display: flex; }
+    .pdf-sel-clear {
+      font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+      border: 1px solid var(--muted); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .pdf-sel-clear:hover { border-color: var(--red); color: var(--red); }
+    .pdf-range-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 13px; flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+    }
+    .pdf-range-row label {
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .pdf-range-input {
+      width: 46px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); font-family: 'DM Mono', monospace;
+      font-size: 12px; padding: 4px 6px; outline: none;
+      text-align: center; transition: border-color 0.2s;
+    }
+    .pdf-range-input:focus { border-color: var(--accent); }
+    .pdf-range-sep { color: var(--muted); font-size: 10px; }
+    .btn-load-range {
+      font-family: 'DM Mono', monospace; font-size: 9px;
+      letter-spacing: 2px; text-transform: uppercase;
+      padding: 5px 11px; border-radius: 4px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-load-range:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ══ ELEVENLABS ══ */
+    .save-note {
+      font-size: 11px; color: var(--text2);
+      line-height: 1.9; margin-bottom: 13px;
+    }
+    .save-note a { color: var(--accent); text-decoration: none; }
+    .save-note a:hover { text-decoration: underline; }
+    .api-row { display: flex; gap: 7px; }
+
+    input[type=text] {
+      flex: 1; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: 'DM Mono', monospace;
+      font-size: 12px; padding: 9px 12px; outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type=text]:focus { border-color: var(--accent); }
+    input[type=text]::placeholder { color: var(--muted); }
+
+    .progress-bar {
+      height: 2px; background: var(--border); border-radius: 2px;
+      margin-top: 12px; overflow: hidden; display: none;
+    }
+    .progress-bar.visible { display: block; }
+    .progress-fill {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      width: 0%; transition: width 0.3s;
+    }
+
+    /* ══ WORD TOOLTIP ══ */
+    .word-tooltip {
+      position: fixed; background: var(--card2);
+      border: 1px solid var(--accent); border-radius: 5px;
+      padding: 4px 11px; font-size: 9px; color: var(--accent);
+      letter-spacing: 2px; text-transform: uppercase;
+      pointer-events: none; z-index: 9999;
+      opacity: 0; transform: translateY(4px);
+      transition: opacity 0.15s, transform 0.15s; white-space: nowrap;
+    }
+    .word-tooltip.show { opacity: 1; transform: translateY(0); }
+
+    /* ══ TOAST ══ */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--card2); color: var(--text2);
+      border: 1px solid var(--border2);
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase;
+      padding: 9px 18px; border-radius: 5px;
+      transition: transform 0.28s ease;
+      pointer-events: none; z-index: 999;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ══ ANIMATIONS ══ */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width: 540px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .api-row { flex-direction: column; }
+      header { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .header-meta { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-eye">text to speech</span>
+    <div class="brand-name">Au<em>di</em>um</div>
+  </div>
+  <div class="header-meta">
+    <span class="header-tag">.txt &nbsp;·&nbsp; .pdf &nbsp;·&nbsp; .docx</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── BLOCO 1: TEXTO ── -->
+  <div class="card group-top">
+    <p class="card-label">// entrada</p>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".txt,.pdf,.docx" />
+      <div class="drop-zone-icon">&#128196;</div>
+      <p class="drop-zone-text">Arraste ou <span>clique para importar</span></p>
+      <p class="drop-zone-formats">.txt &nbsp;·&nbsp; .pdf &nbsp;·&nbsp; .docx</p>
+    </div>
+
+    <!-- PDF panel -->
+    <div class="pdf-panel" id="pdfPanel">
+      <div class="pdf-panel-header">
+        <span class="pdf-panel-title">&#128196; Páginas do PDF</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="pdf-panel-info" id="pdfInfo"></span>
+          <span class="pdf-sel-info" id="pdfSelInfo">
+            <span id="pdfSelCount"></span>
+            <button class="pdf-sel-clear" onclick="clearPageSelection()">✕ Limpar</button>
+            <button class="btn-load-range" onclick="loadSelectedPages()" style="border-color:var(--accent);color:var(--accent);">▶ Carregar seleção</button>
+            <button class="btn-load-range" id="btnSavePdfSel" onclick="saveSelectedAsPdf(this)" style="border-color:#7eb8a4;color:#7eb8a4;">&#128196; Criar PDF</button>
+          </span>
+          <button class="btn-load-range" onclick="savePng(this)" style="border-color:var(--accent);color:var(--accent);">&#128247; Salvar PNG</button>
+        </div>
+      </div>
+      <div class="pdf-page-grid" id="pdfPageGrid"></div>
+      <div class="pdf-range-row">
+        <label>Intervalo</label>
+        <input class="pdf-range-input" type="number" id="pdfRangeFrom" min="1" placeholder="1"/>
+        <span class="pdf-range-sep">até</span>
+        <input class="pdf-range-input" type="number" id="pdfRangeTo" min="1" placeholder="5"/>
+        <button class="btn-load-range" onclick="loadPdfRange()">&#9654; Carregar</button>
+        <button class="btn-load-range" onclick="loadAllPages()">Todas</button>
+      </div>
+    </div>
+
+    <div class="mode-toggle">
+      <div class="mode-tabs">
+        <button class="mode-btn active" id="btnModeEdit" onclick="setMode('edit')">&#9998; Editar</button>
+        <button class="mode-btn" id="btnModeRead" onclick="setMode('read')">&#128065; Leitura</button>
+      </div>
+      <button class="btn-clear" id="btnClear" onclick="clearText()">&#10005; Limpar</button>
+    </div>
+
+    <textarea id="textInput" placeholder="Cole ou digite o texto aqui..."></textarea>
+    <div class="reader-panel" id="readerPanel"></div>
+
+    <div class="font-controls" id="fontControls">
+      <label>Fonte</label>
+      <input type="range" id="fontSlider" min="12" max="26" step="1" value="14" style="flex:1;"/>
+      <span class="slider-val" id="fontVal">14px</span>
+    </div>
+
+    <div class="meta-row">
+      <div class="time-badge hidden" id="timeBadge">&#9201; <span id="timeEstimate"></span></div>
+      <div class="meta-actions">
+        <button class="btn-copy" id="btnCopyText" onclick="copyText()">&#128203; Copiar</button>
+        <button class="btn-copy" id="btnSavePng" onclick="savePng(this)">&#128247; PNG</button>
+        <span class="char-count" id="charCount">0 caracteres</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BLOCO 2: VOZ ── -->
+  <div class="card group-mid">
+    <p class="card-label">// voz</p>
+    <div class="controls-grid">
+      <div class="control-group">
+        <label>Idioma / Voz</label>
+        <select id="voiceSelect"><option>Carregando vozes...</option></select>
+      </div>
+      <div class="control-group">
+        <div class="slider-group">
+          <label>Velocidade</label>
+          <div class="slider-wrap">
+            <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="1"/>
+            <span class="slider-val" id="rateVal">1.0×</span>
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Tom</label>
+          <div class="slider-wrap">
+            <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1"/>
+            <span class="slider-val" id="pitchVal">1.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BLOCO 3: PLAYER ── -->
+  <div class="card group-bottom">
+    <div class="visualizer" id="visualizer">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+    <p class="status-text" id="statusText">aguardando</p>
+    <div class="btn-row">
+      <button class="btn-primary" id="btnPlay" onclick="startSpeech()">▶ Reproduzir</button>
+      <button class="btn-ghost"   id="btnPause" onclick="pauseSpeech()" disabled>⏸ Pausar</button>
+      <button class="btn-danger"  id="btnStop"  onclick="stopSpeech()"  disabled>■ Parar</button>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <!-- ── BLOCO 4: ELEVENLABS ── -->
+  <div class="card group-solo">
+    <p class="card-label">// exportar áudio — ElevenLabs</p>
+    <p class="save-note">
+      Para salvar como <strong>.mp3</strong>, use a API gratuita do
+      <a href="https://elevenlabs.io" target="_blank">ElevenLabs</a>.
+      Crie uma conta, copie sua API key e cole abaixo.
+    </p>
+    <div class="api-row">
+      <input type="text" id="apiKey" placeholder="API Key do ElevenLabs..." />
+      <button class="btn-ghost" onclick="saveAudio()">⬇ Salvar MP3</button>
+    </div>
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="word-tooltip" id="wordTooltip">&#9654; Ler daqui</div>
+
+<script>
+  // ---------- DEPENDENCIAS EXTERNAS ----------
+  const PDF_JS_URL     = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const MAMMOTH_URL    = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+  const JSPDF_URL      = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+  // Mapa de promessas já iniciadas (evita carregar o mesmo script duas vezes)
+  const _scriptPromises = {};
+
+  /**
+   * Carregamento robusto de scripts externos.
+   * Resolve imediatamente se a lib já está pronta, caso contrário aguarda o
+   * evento 'load' com um polling de fallback — necessário no Android WebView,
+   * onde readyState não é confiável e eventos podem ser perdidos.
+   */
+  function loadScript(src, readyCheck) {
+    if (_scriptPromises[src]) return _scriptPromises[src];
+
+    _scriptPromises[src] = new Promise((resolve, reject) => {
+      if (readyCheck && readyCheck()) { resolve(); return; }
+
+      const TIMEOUT_MS = 15000;
+      let settled = false;
+      let pollId  = null;
+      let timerId = null;
+
+      function done(err) {
+        if (settled) return;
+        settled = true;
+        clearInterval(pollId);
+        clearTimeout(timerId);
+        if (err) {
+          delete _scriptPromises[src]; // permite retry em caso de falha
+          reject(err);
+        } else {
+          resolve();
+        }
+      }
+
+      if (readyCheck) {
+        pollId = setInterval(() => { if (readyCheck()) done(); }, 100);
+      }
+
+      timerId = setTimeout(
+        () => done(new Error('Tempo esgotado ao carregar: ' + src)),
+        TIMEOUT_MS
+      );
+
+      let tag = document.querySelector('script[src="' + src + '"]');
+      if (!tag) {
+        tag = document.createElement('script');
+        tag.src = src;
+        tag.async = true;
+        document.head.appendChild(tag);
+      }
+
+      tag.addEventListener('load',  () => done());
+      tag.addEventListener('error', () => done(new Error('Falha ao carregar: ' + src)));
+    });
+
+    return _scriptPromises[src];
+  }
+
+  // Pré-carrega as dependências em paralelo assim que a página abre
+  loadScript(PDF_JS_URL,  () => !!window.pdfjsLib);
+  loadScript(MAMMOTH_URL, () => !!window.mammoth);
+
+  // Aliases legacy (não mais usados diretamente, mas mantidos por segurança)
+  const pdfScript     = { onload: null };
+  const mammothScript = { onload: null };
+
+  const synth = window.speechSynthesis;
+  let utterance = null;
+  let voices = [];
+  let isPaused = false;
+  let wordSpans = [];
+  let currentMode = 'edit';
+  let wordTimerInterval = null;
+  let wordIndex = 0;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isChromeAndroid = isAndroid && /Chrome/.test(navigator.userAgent);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const supportsBoundary = !isIOS && !isChromeAndroid;
+
+  let androidUnlocked = false;
+  if (isChromeAndroid) {
+    const unlockAndroid = () => {
+      if (androidUnlocked) return;
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0.01;
+      synth.speak(u);
+      androidUnlocked = true;
+      document.removeEventListener('touchend', unlockAndroid);
+    };
+    document.addEventListener('touchend', unlockAndroid);
+  }
+
+  // ---------- MODO EDITAR / LEITURA ----------
+  function setMode(mode) {
+    currentMode = mode;
+    const ta = document.getElementById('textInput');
+    const rp = document.getElementById('readerPanel');
+    document.getElementById('btnModeEdit').className = 'mode-btn' + (mode === 'edit' ? ' active' : '');
+    document.getElementById('btnModeRead').className = 'mode-btn' + (mode === 'read' ? ' active' : '');
+    document.getElementById('btnClear').style.display = mode === 'edit' ? 'inline-block' : 'none';
+
+    if (mode === 'read') {
+      buildReaderPanel(ta.value);
+      setupWordClick();
+      ta.style.display = 'none';
+      rp.style.display = 'block';
+      document.getElementById('fontControls').classList.add('visible');
+    } else {
+      ta.style.display = 'block';
+      rp.style.display = 'none';
+      document.getElementById('fontControls').classList.remove('visible');
+    }
+  }
+
+  function buildReaderPanel(text) {
+    const rp = document.getElementById('readerPanel');
+    rp.innerHTML = '';
+    wordSpans = [];
+    if (!text.trim()) {
+      rp.innerHTML = '<span style="color:var(--muted);font-size:12px;">Nenhum texto digitado ainda...</span>';
+      return;
+    }
+    const tokens = text.split(/(\s+)/);
+    tokens.forEach(token => {
+      if (/^\s+$/.test(token)) {
+        rp.appendChild(document.createTextNode(token));
+      } else if (token.length > 0) {
+        const span = document.createElement('span');
+        span.className = 'word';
+        span.textContent = token;
+        span.dataset.index = wordSpans.length;
+        rp.appendChild(span);
+        wordSpans.push(span);
+      }
+    });
+  }
+
+  function highlightWordByIndex(i) {
+    if (i < 0 || i >= wordSpans.length) return;
+    wordSpans.forEach((s, j) => {
+      s.classList.remove('highlight');
+      if (j < i) s.classList.add('done');
+      else s.classList.remove('done');
+    });
+    wordSpans[i].classList.add('highlight');
+    wordSpans[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function highlightWordByChar(charIndex) {
+    wordSpans.forEach(s => s.classList.remove('highlight'));
+    let best = 0, bestDist = Infinity;
+    const rawText = document.getElementById('textInput').value;
+    const tokens = rawText.split(/(\s+)/);
+    let spanIdx = 0, pos = 0;
+    for (let t = 0; t < tokens.length; t++) {
+      const tok = tokens[t];
+      if (!/^\s+$/.test(tok) && tok.length > 0 && spanIdx < wordSpans.length) {
+        const dist = Math.abs(pos - charIndex);
+        if (dist < bestDist) { bestDist = dist; best = spanIdx; }
+        spanIdx++;
+      }
+      pos += tok.length;
+    }
+    for (let j = 0; j < best; j++) wordSpans[j].classList.add('done');
+    wordSpans[best].classList.remove('done');
+    wordSpans[best].classList.add('highlight');
+    wordSpans[best].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    wordIndex = best;
+  }
+
+  function startWordTimer(rate) {
+    stopWordTimer();
+    wordIndex = 0;
+    const msPerWord = Math.max(120, 400 / rate);
+    wordTimerInterval = setInterval(() => {
+      if (wordIndex < wordSpans.length) { highlightWordByIndex(wordIndex); wordIndex++; }
+      else stopWordTimer();
+    }, msPerWord);
+  }
+
+  function stopWordTimer() {
+    if (wordTimerInterval) { clearInterval(wordTimerInterval); wordTimerInterval = null; }
+  }
+
+  function clearHighlights(done = false) {
+    wordSpans.forEach(s => {
+      s.classList.remove('highlight');
+      if (done) s.classList.add('done');
+      else s.classList.remove('done');
+    });
+  }
+
+  // ---------- VOZES ----------
+  function loadVoices() {
+    voices = synth.getVoices();
+    const sel = document.getElementById('voiceSelect');
+    sel.innerHTML = '';
+    const ptVoices = voices.filter(v => v.lang.startsWith('pt'));
+    const other    = voices.filter(v => !v.lang.startsWith('pt'));
+    if (ptVoices.length > 0) {
+      const g = document.createElement('optgroup');
+      g.label = 'Português';
+      ptVoices.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v.name;
+        o.textContent = v.name + ' (' + v.lang + ')';
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    }
+    if (other.length > 0) {
+      const g2 = document.createElement('optgroup');
+      g2.label = 'Outros idiomas';
+      other.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v.name;
+        o.textContent = v.name + ' (' + v.lang + ')';
+        g2.appendChild(o);
+      });
+      sel.appendChild(g2);
+    }
+    if (isMobile && voices.length === 0) {
+      const o = document.createElement('option');
+      o.textContent = 'Voz padrão do dispositivo';
+      sel.appendChild(o);
+    }
+  }
+
+  loadVoices();
+  if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+  if (isIOS || isAndroid) { [300, 700, 1500, 3000].forEach(ms => setTimeout(loadVoices, ms)); }
+
+  document.getElementById('textInput').addEventListener('input', function() { updateMeta(this.value); });
+
+  function updateMeta(text) {
+    document.getElementById('charCount').textContent = text.length + ' caracteres';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const badge = document.getElementById('timeBadge');
+    if (words > 0) {
+      const rate = parseFloat(document.getElementById('rateSlider').value);
+      const wpm = Math.round(150 * rate);
+      const totalSec = Math.round((words / wpm) * 60);
+      let timeStr = totalSec < 60
+        ? totalSec + ' seg'
+        : '~' + Math.floor(totalSec / 60) + (totalSec % 60 > 0 ? ':' + String(totalSec % 60).padStart(2,'0') : '') + ' min';
+      document.getElementById('timeEstimate').textContent = timeStr + ' de leitura';
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('rateSlider').addEventListener('input', function() {
+    document.getElementById('rateVal').textContent = parseFloat(this.value).toFixed(1) + 'x';
+    updateMeta(document.getElementById('textInput').value);
+  });
+  document.getElementById('pitchSlider').addEventListener('input', function() {
+    document.getElementById('pitchVal').textContent = parseFloat(this.value).toFixed(1);
+  });
+
+  function setStatus(text, active = false) {
+    const el = document.getElementById('statusText');
+    el.textContent = text;
+    el.className = 'status-text' + (active ? ' active' : '');
+    document.getElementById('visualizer').className = 'visualizer' + (active ? ' speaking' : '');
+  }
+
+  function setButtons(playing) {
+    document.getElementById('btnPlay').disabled = playing;
+    document.getElementById('btnPause').disabled = !playing;
+    document.getElementById('btnStop').disabled = !playing;
+  }
+
+  // ---------- SPEECH ----------
+  function startSpeech() {
+    const rawText = document.getElementById('textInput').value.trim();
+    if (!rawText) { showToast('Digite um texto primeiro!'); return; }
+    const text = rawText.replace(/#{1,6}\s*/g, '').replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, '$1').replace(/[*_]+/g, '');
+
+    if (isPaused) {
+      synth.resume();
+      isPaused = false;
+      setStatus('lendo...', true);
+      document.getElementById('btnPause').textContent = 'Pausar';
+      if (isIOS) { const rate = parseFloat(document.getElementById('rateSlider').value); startWordTimerFrom(wordIndex, rate); }
+      return;
+    }
+
+    if (currentMode === 'edit') setMode('read');
+    synth.cancel();
+    stopWordTimer();
+    clearHighlights(false);
+
+    function doSpeak() {
+      utterance = new SpeechSynthesisUtterance(text);
+      const voiceName = document.getElementById('voiceSelect').value;
+      const voice = voices.find(v => v.name === voiceName);
+      if (voice) utterance.voice = voice;
+      const rate = parseFloat(document.getElementById('rateSlider').value);
+      utterance.rate  = rate;
+      utterance.pitch = parseFloat(document.getElementById('pitchSlider').value);
+      utterance.volume = 1;
+
+      utterance.onstart = () => {
+        setStatus('lendo...', true);
+        setButtons(true);
+        if (isIOS || isChromeAndroid) startWordTimer(rate);
+      };
+      if (supportsBoundary) {
+        utterance.onboundary = (e) => { if (e.name === 'word') highlightWordByChar(e.charIndex); };
+      }
+      utterance.onend = () => {
+        stopWordTimer(); clearHighlights(true);
+        setStatus('concluído'); setButtons(false);
+        isPaused = false;
+        document.getElementById('btnPause').textContent = 'Pausar';
+      };
+      utterance.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        stopWordTimer(); setStatus('erro: ' + (e.error || '')); setButtons(false);
+      };
+      synth.speak(utterance);
+
+      if (isChromeAndroid) {
+        setTimeout(() => {
+          if (synth.speaking) return;
+          synth.cancel();
+          const u2 = new SpeechSynthesisUtterance(text);
+          u2.rate = rate; u2.pitch = parseFloat(document.getElementById('pitchSlider').value); u2.volume = 1;
+          u2.onstart = utterance.onstart; u2.onend = utterance.onend; u2.onerror = utterance.onerror;
+          utterance = u2; synth.speak(u2);
+        }, 1000);
+      }
+    }
+
+    if (isIOS) setTimeout(doSpeak, 100);
+    else if (isChromeAndroid) setTimeout(doSpeak, 150);
+    else doSpeak();
+  }
+
+  let pausedAtWord = -1;
+
+  function pauseSpeech() {
+    if (!isPaused) {
+      if (isMobile && !isIOS) {
+        pausedAtWord = wordIndex;
+        synth.cancel(); stopWordTimer(); isPaused = true;
+        setStatus('pausado');
+        document.getElementById('btnPause').textContent = 'Continuar';
+        document.getElementById('visualizer').className = 'visualizer';
+      } else {
+        synth.pause(); stopWordTimer(); isPaused = true;
+        setStatus('pausado');
+        document.getElementById('btnPause').textContent = 'Continuar';
+        document.getElementById('visualizer').className = 'visualizer';
+      }
+    } else {
+      if (isMobile && !isIOS && pausedAtWord >= 0) {
+        isPaused = false;
+        const words = wordSpans.slice(pausedAtWord).map(s => s.textContent);
+        const fromHere = words.join(' ').replace(/#{1,6}\s*/g, '').replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, '$1').replace(/[*_]+/g, '');
+        utterance = new SpeechSynthesisUtterance(fromHere);
+        const voiceName = document.getElementById('voiceSelect').value;
+        const voice = voices.find(v => v.name === voiceName);
+        if (voice) utterance.voice = voice;
+        const rate = parseFloat(document.getElementById('rateSlider').value);
+        utterance.rate = rate; utterance.pitch = parseFloat(document.getElementById('pitchSlider').value);
+        const startIdx = pausedAtWord;
+        utterance.onstart = () => { setStatus('lendo...', true); setButtons(true); startWordTimerFrom(startIdx, rate); };
+        utterance.onboundary = (e) => {
+          if (e.name !== 'word') return;
+          const sub = fromHere.substring(0, e.charIndex);
+          const wCount = sub.trim() === '' ? 0 : sub.trim().split(/\s+/).length;
+          const absIndex = startIdx + wCount;
+          if (absIndex < wordSpans.length) {
+            wordSpans.forEach((s, j) => { s.classList.remove('highlight'); if (j < absIndex) s.classList.add('done'); else s.classList.remove('done'); });
+            wordSpans[absIndex].classList.add('highlight');
+            wordSpans[absIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        };
+        utterance.onend = () => { stopWordTimer(); clearHighlights(true); setStatus('concluído'); setButtons(false); isPaused = false; document.getElementById('btnPause').textContent = 'Pausar'; };
+        utterance.onerror = (e) => { if (e.error === 'interrupted' || e.error === 'canceled') return; stopWordTimer(); setStatus('erro'); setButtons(false); };
+        setButtons(true); synth.speak(utterance);
+        document.getElementById('btnPause').textContent = 'Pausar'; pausedAtWord = -1;
+      } else {
+        synth.resume(); isPaused = false; setStatus('lendo...', true);
+        document.getElementById('btnPause').textContent = 'Pausar';
+        if (isIOS) { const rate = parseFloat(document.getElementById('rateSlider').value); startWordTimer(rate); }
+      }
+    }
+  }
+
+  function stopSpeech() {
+    synth.cancel(); stopWordTimer(); isPaused = false;
+    clearHighlights(false); setStatus('parado'); setButtons(false);
+    document.getElementById('btnPause').textContent = 'Pausar';
+  }
+
+  // ---------- SALVAR MP3 ----------
+  async function saveAudio() {
+    const text   = document.getElementById('textInput').value.trim();
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!text)   { showToast('Digite um texto primeiro!'); return; }
+    if (!apiKey) { showToast('Cole sua API Key do ElevenLabs!'); return; }
+
+    const progressBar  = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    progressBar.classList.add('visible'); progressFill.style.width = '30%';
+    showToast('Gerando áudio...');
+    try {
+      const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
+        body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } })
+      });
+      progressFill.style.width = '80%';
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail?.message || 'Erro na API'); }
+      const blob = await res.blob();
+      progressFill.style.width = '100%';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'audium-audio.mp3'; a.click();
+      URL.revokeObjectURL(url);
+      showToast('MP3 salvo!');
+    } catch (e) {
+      showToast('Erro: ' + e.message);
+    } finally {
+      setTimeout(() => { progressBar.classList.remove('visible'); progressFill.style.width = '0%'; }, 1500);
+    }
+  }
+
+  // ---------- IMPORTAR ARQUIVO ----------
+  function setupDropZone() {
+    const dz = document.getElementById('dropZone');
+    const fi = document.getElementById('fileInput');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const file = e.dataTransfer.files[0]; if (file) handleFile(file); });
+    fi.addEventListener('change', () => { if (fi.files[0]) handleFile(fi.files[0]); });
+  }
+
+  async function handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    showToast('Carregando ' + file.name + '...');
+    try {
+      let text = '';
+      if (ext === 'txt') text = await file.text();
+      else if (ext === 'pdf') text = await extractPDF(file);
+      else if (ext === 'docx') text = await extractDOCX(file);
+      else { showToast('Formato não suportado.'); return; }
+      document.getElementById('textInput').value = text;
+      updateMeta(text);
+      const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+      if (wordCount === 0 && ext === 'pdf') {
+        showToast('PDF sem texto extraível (pode ser imagem escaneada).');
+      } else {
+        showToast('Carregado! ' + wordCount + ' palavras.');
+      }
+    } catch(e) { showToast('Erro: ' + e.message); }
+  }
+
+  let currentPDF = null;
+
+  async function extractPDF(file) {
+    await loadScript(PDF_JS_URL, () => !!window.pdfjsLib);
+    if (!window.pdfjsLib) throw new Error('PDF.js não carregou. Verifique sua conexão.');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+    const ab = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: ab });
+    currentPDF = await loadingTask.promise;
+    buildPdfPanel(currentPDF.numPages);
+    return await getPdfText(1, currentPDF.numPages);
+  }
+
+  async function getPdfText(from, to) {
+    let fullText = '';
+    from = Math.max(1, from);
+    to   = Math.min(to, currentPDF.numPages);
+    for (let i = from; i <= to; i++) {
+      const page = await currentPDF.getPage(i);
+      const tc   = await page.getTextContent();
+      fullText += tc.items.map(s => s.str).join(' ') + '\n';
+    }
+    return fullText.trim();
+  }
+
+  let selectedPages = new Set();
+
+  function updateSelInfo() {
+    const info = document.getElementById('pdfSelInfo');
+    const count = document.getElementById('pdfSelCount');
+    if (selectedPages.size === 0) {
+      info.classList.remove('visible');
+    } else {
+      info.classList.add('visible');
+      const sorted = [...selectedPages].sort((a,b) => a-b);
+      count.textContent = selectedPages.size === 1
+        ? '1 página selecionada'
+        : selectedPages.size + ' páginas: ' + sorted.join(', ');
+    }
+  }
+
+  function clearPageSelection() {
+    selectedPages.clear();
+    document.getElementById('pdfPageGrid').querySelectorAll('.pdf-page-btn').forEach(b => b.classList.remove('selected', 'active'));
+    updateSelInfo();
+  }
+
+  async function loadSelectedPages() {
+    if (!currentPDF || selectedPages.size === 0) return;
+    const sorted = [...selectedPages].sort((a,b) => a-b);
+    showToast('Carregando ' + sorted.length + ' página(s)...');
+    try {
+      let fullText = '';
+      for (const p of sorted) {
+        const page = await currentPDF.getPage(p);
+        const tc   = await page.getTextContent();
+        fullText += tc.items.map(s => s.str).join(' ') + '\n';
+      }
+      const text = fullText.trim();
+      document.getElementById('textInput').value = text;
+      updateMeta(text);
+      showToast('Páginas ' + sorted.join(', ') + ' carregadas!');
+    } catch(e) { showToast('Erro: ' + e.message); }
+  }
+
+  function buildPdfPanel(totalPages) {
+    const panel = document.getElementById('pdfPanel');
+    const grid  = document.getElementById('pdfPageGrid');
+    const info  = document.getElementById('pdfInfo');
+    grid.innerHTML = '';
+    selectedPages.clear();
+    updateSelInfo();
+    info.textContent = totalPages + ' página' + (totalPages > 1 ? 's' : '');
+    document.getElementById('pdfRangeTo').value = totalPages;
+    document.getElementById('pdfRangeFrom').value = 1;
+    document.getElementById('pdfRangeTo').max = totalPages;
+    document.getElementById('pdfRangeFrom').max = totalPages;
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'pdf-page-btn';
+      btn.textContent = i;
+      btn.title = 'Clique para selecionar a página ' + i;
+      btn.dataset.page = i;
+      btn.addEventListener('click', async () => {
+        const pageNum = parseInt(btn.dataset.page);
+        if (selectedPages.has(pageNum)) {
+          // desseleciona
+          selectedPages.delete(pageNum);
+          btn.classList.remove('selected', 'active');
+        } else {
+          // seleciona
+          selectedPages.add(pageNum);
+          btn.classList.add('selected');
+          // remove destaque "active" anterior (single-page highlight)
+          btn.classList.remove('active');
+        }
+        updateSelInfo();
+
+        // Se só uma página selecionada, carrega direto e destaca
+        if (selectedPages.size === 1) {
+          const p = [...selectedPages][0];
+          showToast('Carregando página ' + p + '...');
+          try {
+            const text = await getPdfText(p, p);
+            document.getElementById('textInput').value = text;
+            updateMeta(text);
+            showToast('Página ' + p + ' — ' + (text.trim() ? text.trim().split(/\s+/).length : 0) + ' palavras.');
+          } catch(e) { showToast('Erro: ' + e.message); }
+        }
+      });
+      grid.appendChild(btn);
+    }
+    panel.classList.add('visible');
+  }
+
+  async function loadPdfRange() {
+    if (!currentPDF) return;
+    const from = parseInt(document.getElementById('pdfRangeFrom').value) || 1;
+    const to   = parseInt(document.getElementById('pdfRangeTo').value)   || currentPDF.numPages;
+    if (from > to) { showToast('Intervalo inválido!'); return; }
+    showToast('Carregando páginas ' + from + ' a ' + to + '...');
+    clearPageSelection();
+    try {
+      const text = await getPdfText(from, to);
+      document.getElementById('textInput').value = text;
+      updateMeta(text);
+      showToast('Páginas ' + from + '–' + to + ' carregadas!');
+    } catch(e) { showToast('Erro: ' + e.message); }
+  }
+
+  async function loadAllPages() {
+    if (!currentPDF) return;
+    clearPageSelection();
+    document.getElementById('pdfRangeFrom').value = 1;
+    document.getElementById('pdfRangeTo').value   = currentPDF.numPages;
+    showToast('Carregando todas as páginas...');
+    try {
+      const text = await getPdfText(1, currentPDF.numPages);
+      document.getElementById('textInput').value = text;
+      updateMeta(text);
+      showToast('PDF completo carregado!');
+    } catch(e) { showToast('Erro: ' + e.message); }
+  }
+
+  async function extractDOCX(file) {
+    await loadScript(MAMMOTH_URL, () => !!window.mammoth);
+    if (!window.mammoth) throw new Error('Mammoth não carregou. Verifique sua conexão.');
+    const ab = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: ab });
+    return result.value.trim();
+  }
+
+  setupDropZone();
+
+  // ---------- FONT SLIDER ----------
+  document.getElementById('fontSlider').addEventListener('input', function() {
+    document.getElementById('fontVal').textContent = this.value + 'px';
+    document.getElementById('readerPanel').style.fontSize = this.value + 'px';
+  });
+
+  // ---------- TOUCH MOBILE ----------
+  document.getElementById('readerPanel').addEventListener('touchstart', function(e) {
+    const span = e.target.closest('.word');
+    if (span) { span.classList.add('touch-active'); setTimeout(() => span.classList.remove('touch-active'), 300); }
+  }, { passive: true });
+
+  // ---------- LIMPAR ----------
+  function clearText() {
+    if (!document.getElementById('textInput').value.trim()) return;
+    if (!confirm('Limpar todo o texto?')) return;
+    stopSpeech();
+    document.getElementById('textInput').value = '';
+    updateMeta('');
+    document.getElementById('readerPanel').innerHTML = '';
+    wordSpans = []; currentPDF = null;
+    clearPageSelection();
+    document.getElementById('pdfPanel').classList.remove('visible');
+    setMode('edit');
+    showToast('Texto limpo!');
+  }
+
+  // ---------- CLICK NA PALAVRA ----------
+  const tooltip = document.getElementById('wordTooltip');
+
+  function setupWordClick() {
+    if (!wordSpans || wordSpans.length === 0) return;
+    wordSpans.forEach((span, i) => {
+      span.addEventListener('click', () => {
+        synth.cancel(); stopWordTimer(); isPaused = false; clearHighlights(false);
+        const words = wordSpans.slice(i).map(s => s.textContent);
+        const fromHere = words.join(' ');
+        const cleanText = fromHere.replace(/#{1,6}\s*/g, '').replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, '$1').replace(/[*_]+/g, '');
+        for (let j = 0; j < i; j++) wordSpans[j].classList.add('done');
+
+        utterance = new SpeechSynthesisUtterance(cleanText);
+        const voiceName = document.getElementById('voiceSelect').value;
+        const voice = voices.find(v => v.name === voiceName);
+        if (voice) utterance.voice = voice;
+        const rate = parseFloat(document.getElementById('rateSlider').value);
+        utterance.rate  = rate;
+        utterance.pitch = parseFloat(document.getElementById('pitchSlider').value);
+
+        utterance.onstart = () => {
+          setStatus('lendo...', true); setButtons(true);
+          if (isIOS || !supportsBoundary) { wordIndex = i; startWordTimerFrom(i, rate); }
+        };
+        if (supportsBoundary) {
+          utterance.onboundary = (e) => {
+            if (e.name !== 'word') return;
+            const sub = cleanText.substring(0, e.charIndex);
+            const wCount = sub.trim() === '' ? 0 : sub.trim().split(/\s+/).length;
+            const absIndex = i + wCount;
+            if (absIndex < wordSpans.length) {
+              wordSpans.forEach((s, j) => { s.classList.remove('highlight'); if (j < absIndex) s.classList.add('done'); else s.classList.remove('done'); });
+              wordSpans[absIndex].classList.add('highlight');
+              wordSpans[absIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+          };
+        }
+        utterance.onend = () => { stopWordTimer(); clearHighlights(true); setStatus('concluído'); setButtons(false); isPaused = false; document.getElementById('btnPause').textContent = 'Pausar'; };
+        utterance.onerror = (e) => { if (e.error === 'interrupted' || e.error === 'canceled') return; stopWordTimer(); setStatus('erro: ' + (e.error || '')); setButtons(false); };
+
+        if (isIOS) setTimeout(() => synth.speak(utterance), 100);
+        else if (isChromeAndroid) setTimeout(() => synth.speak(utterance), 150);
+        else synth.speak(utterance);
+      });
+
+      span.addEventListener('mouseenter', (e) => { tooltip.classList.add('show'); positionTooltip(e); });
+      span.addEventListener('mousemove', positionTooltip);
+      span.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+    });
+  }
+
+  function positionTooltip(e) {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top  = (e.clientY - 32) + 'px';
+  }
+
+  function startWordTimerFrom(startIndex, rate) {
+    stopWordTimer();
+    wordIndex = startIndex;
+    const msPerWord = Math.max(120, 400 / rate);
+    wordTimerInterval = setInterval(() => {
+      if (wordIndex < wordSpans.length) { highlightWordByIndex(wordIndex); wordIndex++; }
+      else stopWordTimer();
+    }, msPerWord);
+  }
+
+  // ---------- SALVAR PNG (páginas do PDF) ----------
+  async function savePng(callerBtn) {
+    const btn = callerBtn || document.getElementById('btnSavePng');
+    if (!currentPDF) { showToast('Carregue um PDF primeiro!'); return; }
+
+    const fromVal = parseInt(document.getElementById('pdfRangeFrom').value) || 1;
+    const toVal   = parseInt(document.getElementById('pdfRangeTo').value)   || currentPDF.numPages;
+    const activeBtn = document.getElementById('pdfPageGrid').querySelector('.pdf-page-btn.active');
+    const singlePage = activeBtn ? parseInt(activeBtn.textContent) : null;
+    const from = singlePage || Math.max(1, fromVal);
+    const to   = singlePage || Math.min(toVal, currentPDF.numPages);
+    if (from > to) { showToast('Intervalo inválido!'); return; }
+
+    const total = to - from + 1;
+    btn.innerHTML = '⏳ 0/' + total;
+    btn.disabled = true;
+    showToast(total === 1 ? 'Gerando PNG...' : 'Gerando ' + total + ' PNGs...');
+
+    await loadScript(PDF_JS_URL, () => !!window.pdfjsLib);
+    const scale = 2.0;
+
+    try {
+      for (let pageNum = from; pageNum <= to; pageNum++) {
+        btn.innerHTML = '⏳ ' + (pageNum - from + 1) + '/' + total;
+        const page = await currentPDF.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        const final = document.createElement('canvas');
+        final.width = canvas.width; final.height = canvas.height;
+        const fctx = final.getContext('2d');
+        fctx.fillStyle = '#ffffff';
+        fctx.fillRect(0, 0, final.width, final.height);
+        fctx.drawImage(canvas, 0, 0);
+
+        const link = document.createElement('a');
+        link.download = 'audium-p' + String(pageNum).padStart(3, '0') + '-' + new Date().toISOString().slice(0,10) + '.png';
+        link.href = final.toDataURL('image/png');
+        link.click();
+        if (pageNum < to) await new Promise(r => setTimeout(r, 300));
+      }
+      showToast(total === 1 ? 'PNG salvo!' : total + ' PNGs salvos!');
+    } catch(e) {
+      showToast('Erro: ' + e.message);
+    } finally {
+      btn.innerHTML = '&#128247; PNG';
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- CRIAR PDF COM PÁGINAS SELECIONADAS ----------
+  async function saveSelectedAsPdf(callerBtn) {
+    const btn = callerBtn || document.getElementById('btnSavePdfSel');
+    if (!currentPDF) { showToast('Carregue um PDF primeiro!'); return; }
+    if (selectedPages.size === 0) { showToast('Selecione ao menos uma página!'); return; }
+
+    const sorted = [...selectedPages].sort((a, b) => a - b);
+    const total  = sorted.length;
+
+    btn.innerHTML = '⏳ 0/' + total;
+    btn.disabled  = true;
+    showToast('Gerando PDF com ' + total + ' página(s)...');
+
+    try {
+      await loadScript(PDF_JS_URL,  () => !!window.pdfjsLib);
+      await loadScript(JSPDF_URL,   () => !!(window.jspdf && window.jspdf.jsPDF));
+
+      const { jsPDF } = window.jspdf;
+      const scale = 2.0;
+      let doc = null;
+
+      for (let idx = 0; idx < sorted.length; idx++) {
+        const pageNum = sorted[idx];
+        btn.innerHTML = '⏳ ' + (idx + 1) + '/' + total;
+
+        const page     = await currentPDF.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+
+        // renderiza no canvas
+        const canvas  = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        // canvas com fundo branco
+        const final  = document.createElement('canvas');
+        final.width  = canvas.width;
+        final.height = canvas.height;
+        const fctx   = final.getContext('2d');
+        fctx.fillStyle = '#ffffff';
+        fctx.fillRect(0, 0, final.width, final.height);
+        fctx.drawImage(canvas, 0, 0);
+
+        const imgData  = final.toDataURL('image/jpeg', 0.92);
+        const pxToMm   = 25.4 / 96;           // 96 dpi reference
+        const wMm      = (viewport.width  / scale) * pxToMm;
+        const hMm      = (viewport.height / scale) * pxToMm;
+
+        if (!doc) {
+          doc = new jsPDF({ orientation: wMm > hMm ? 'l' : 'p', unit: 'mm', format: [wMm, hMm] });
+        } else {
+          doc.addPage([wMm, hMm], wMm > hMm ? 'l' : 'p');
+        }
+
+        doc.addImage(imgData, 'JPEG', 0, 0, wMm, hMm);
+      }
+
+      const filename = 'audium-paginas-' + sorted.join('-') + '-' + new Date().toISOString().slice(0,10) + '.pdf';
+      doc.save(filename);
+      showToast(total === 1 ? 'PDF criado!' : 'PDF com ' + total + ' páginas criado!');
+    } catch(e) {
+      showToast('Erro: ' + e.message);
+    } finally {
+      btn.innerHTML = '&#128196; Criar PDF';
+      btn.disabled  = false;
+    }
+  }
+  async function copyText() {
+    const text = document.getElementById('textInput').value.trim();
+    if (!text) { showToast('Nenhum texto!'); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch(e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    const btn = document.getElementById('btnCopyText');
+    btn.textContent = '✓ Copiado!'; btn.classList.add('copied');
+    showToast('Texto copiado!');
+    setTimeout(() => { btn.innerHTML = '&#128203; Copiar'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     PWA — Manifest + Service Worker (inline / single-file)
+     ═══════════════════════════════════════════════════════ -->
+<script>
+(function initPWA() {
+
+  /* ── 1. Ícone SVG gerado inline ── */
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="110" fill="#080808"/>
+    <text x="256" y="340" text-anchor="middle"
+          font-family="Georgia,serif" font-size="280" font-weight="300"
+          font-style="italic" fill="#c9a84c">A</text>
+  </svg>`;
+  const iconBlob = new Blob([iconSvg], { type: 'image/svg+xml' });
+  const iconUrl  = URL.createObjectURL(iconBlob);
+  document.getElementById('appleTouchIcon').href = iconUrl;
+
+  /* ── 2. Web App Manifest injetado via Blob ── */
+  const manifest = {
+    name: 'Audium',
+    short_name: 'Audium',
+    description: 'Leitor de texto em voz alta — TXT, PDF e DOCX',
+    start_url: './',
+    scope: './',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#080808',
+    theme_color: '#080808',
+    lang: 'pt-BR',
+    icons: [
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    ]
+  };
+  const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  document.getElementById('pwaManifest').href = URL.createObjectURL(manifestBlob);
+
+  /* ── 3. Service Worker (cache-first para assets, network-first para CDN) ── */
+  const swCode = `
+const CACHE = 'audium-v1';
+const PRECACHE = []; // Nada a pré-cachear em single-file
+
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  const url = e.request.url;
+
+  // Ignora requests não-GET e chrome-extension
+  if (e.request.method !== 'GET' || url.startsWith('chrome-extension')) return;
+
+  // CDN (pdf.js, mammoth, fonts): network-first, fallback ao cache
+  if (url.includes('cdnjs.cloudflare.com') || url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Demais requests: cache-first
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
+        if (res && res.status === 200 && res.type !== 'opaque') {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      });
+    })
+  );
+});
+`;
+
+  // Registra beforeinstallprompt IMEDIATAMENTE — antes do SW, pois o evento
+  // pode disparar antes do .then() do registro do Service Worker
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    window._pwaPrompt = e;
+    showInstallBanner();
+  });
+
+  if ('serviceWorker' in navigator) {
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl  = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, { scope: './' })
+      .then(reg => console.log('[Audium PWA] Service Worker registrado:', reg.scope))
+      .catch(err => console.warn('[Audium PWA] SW falhou:', err));
+  }
+
+  /* ── 4. Banner de instalação ── */
+  function showInstallBanner() {
+    if (document.getElementById('pwaBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'pwaBanner';
+    banner.style.cssText = `
+      position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+      background:#131313;border:1px solid #c9a84c40;border-radius:8px;
+      padding:10px 16px;display:flex;align-items:center;gap:12px;
+      font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;
+      text-transform:uppercase;color:#9a9285;z-index:9999;
+      box-shadow:0 4px 24px #0008;white-space:nowrap;
+    `;
+    banner.innerHTML = `
+      <span style="color:#c9a84c">⬇ Instalar app</span>
+      <button id="pwaInstallBtn" style="
+        font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+        text-transform:uppercase;padding:6px 12px;border-radius:5px;
+        background:#c9a84c;color:#080808;border:none;cursor:pointer;font-weight:500;
+      ">Instalar</button>
+      <button id="pwaDismissBtn" style="
+        background:transparent;border:none;color:#484440;cursor:pointer;font-size:14px;padding:0 2px;
+      ">✕</button>
+    `;
+    document.body.appendChild(banner);
+    document.getElementById('pwaInstallBtn').onclick = async () => {
+      if (!window._pwaPrompt) return;
+      window._pwaPrompt.prompt();
+      const { outcome } = await window._pwaPrompt.userChoice;
+      if (outcome === 'accepted') banner.remove();
+      window._pwaPrompt = null;
+    };
+    document.getElementById('pwaDismissBtn').onclick = () => banner.remove();
+  }
+
+  // iOS: sem beforeinstallprompt — mostra dica manual
+  const isIosSafari = /iP(hone|od|ad)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !navigator.userAgent.includes('CriOS');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isIosSafari && !isStandalone) {
+    setTimeout(() => {
+      showToast('iOS: toque em Compartilhar → "Adicionar à Tela de Início"');
+    }, 3000);
+  }
+
+})();
+</script>
+</body>
+</html>
